@@ -14,6 +14,38 @@ const VacanciesPage = () => {
 
   const isUpdatingFromUrl = useRef(false);
 
+useEffect(() => {
+    const hasInitialized = sessionStorage.getItem('filtersInitialized');
+    // Если инициализация ещё не выполнялась и URL пуст
+    if (!hasInitialized && searchParams.toString() === '') {
+      // Устанавливаем дефолтные навыки и страницу в URL
+      setSearchParams({
+        skill: ['TypeScript', 'React', 'Redux'],
+        page: '0'
+      });
+      // Немедленно загружаем вакансии с этими навыками
+      dispatch(loadVacancies({
+        text: 'TypeScript React Redux',
+        area: undefined,
+        page: 0,
+      }));
+      // Запоминаем, что инициализация выполнена
+      sessionStorage.setItem('filtersInitialized', 'true');
+    }
+  }, []); // Пустой массив – выполняется только при монтировании
+
+  // Эффект для сброса поискового запроса при перезагрузке
+useEffect(() => {
+  // Проверяем, есть ли параметр search в URL
+  if (searchParams.has('search')) {
+    // Создаём новый объект параметров без search
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('search');
+    // Обновляем URL – это вызовет эффект URL→Redux и загрузит вакансии без поиска
+    setSearchParams(newParams);
+  }
+}, []); // Только при монтировании
+
   // Эффект 1: URL -> Redux
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
