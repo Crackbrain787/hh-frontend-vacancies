@@ -6,7 +6,6 @@ const API_BASE_URL = 'https://api.hh.ru/vacancies';
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'User-Agent': 'hh-frontend-vacancies/1.0',
     'Accept': 'application/json',
   },
 });

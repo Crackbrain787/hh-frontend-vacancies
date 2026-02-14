@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
-import { useCallback, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppDispatch';
-import { updateFilters, setCurrentPage } from '../store/slices/vacanciesSlice';
+import { updateFilters, setCurrentPage, loadVacancies } from '../store/slices/vacanciesSlice';
 import Header from '../components/Header';
 import HeroSection from '../components/HeroSection';
 import SkillsAndCityFilter from '../components/SkillsAndCityFilter';
@@ -12,7 +12,9 @@ const VacanciesPage = () => {
   const dispatch = useAppDispatch();
   const filters = useAppSelector((state) => state.vacancies.filters);
 
-  
+  const isUpdatingFromUrl = useRef(false);
+
+  // Эффект 1: URL -> Redux
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
     const urlCity = searchParams.get('city') || '';
@@ -20,49 +22,97 @@ const VacanciesPage = () => {
     const urlPage = parseInt(searchParams.get('page') || '0', 10);
 
     const newFilters: Partial<typeof filters> = {};
-
     if (urlSearch !== filters.search) newFilters.search = urlSearch;
     if (urlCity !== filters.area) newFilters.area = urlCity;
-    if (urlSkills.length) newFilters.skills = urlSkills;
-    if (!isNaN(urlPage) && urlPage !== filters.page) {
-      newFilters.page = urlPage;
+    if (JSON.stringify([...urlSkills].sort()) !== JSON.stringify([...filters.skills].sort())) {
+      newFilters.skills = urlSkills;
     }
+    if (!isNaN(urlPage) && urlPage !== filters.page) newFilters.page = urlPage;
 
     if (Object.keys(newFilters).length > 0) {
+      isUpdatingFromUrl.current = true;
       dispatch(updateFilters(newFilters));
       if (newFilters.page !== undefined) {
         dispatch(setCurrentPage(newFilters.page));
       }
+
+      // После обновления фильтров загружаем вакансии
+      const searchParts = [];
+      // Берём значения из newFilters, если они есть, иначе из текущих filters
+      const newSearch = newFilters.search !== undefined ? newFilters.search : filters.search;
+      const newArea = newFilters.area !== undefined ? newFilters.area : filters.area;
+      const newSkills = newFilters.skills !== undefined ? newFilters.skills : filters.skills;
+      const newPage = newFilters.page !== undefined ? newFilters.page : filters.page;
+
+      if (newSearch?.trim()) {
+        searchParts.push(newSearch.trim());
+      }
+      if (newSkills.length > 0) {
+        searchParts.push(...newSkills);
+      }
+      const searchText = searchParts.length > 0 ? searchParts.join(' ') : undefined;
+
+      dispatch(loadVacancies({
+        text: searchText,
+        area: newArea || undefined,
+        page: newPage,
+      }));
+
+      setTimeout(() => {
+        isUpdatingFromUrl.current = false;
+      }, 0);
     }
-  }, []); // eslint-disable-line
+  }, [searchParams]); // не включаем filters, чтобы избежать цикла
 
- 
-  const syncUrlWithFilters = useCallback(() => {
-    setSearchParams((prev) => {
-      prev.delete('search');
-      prev.delete('city');
-      prev.delete('page');
-      prev.delete('skill');
+  // Эффект 2: Redux -> URL
+  useEffect(() => {
+    if (isUpdatingFromUrl.current) return;
 
-      if (filters.search) prev.set('search', filters.search);
-      if (filters.area) prev.set('city', filters.area);
-      if (filters.page > 0) prev.set('page', String(filters.page));
-      filters.skills.forEach((skill) => prev.append('skill', skill));
+    const params = new URLSearchParams(searchParams);
+    let changed = false;
 
-      return prev;
-    });
-  }, [filters, setSearchParams]);
+    const updateParam = (key: string, value: string | null) => {
+      const current = params.get(key);
+      if (!value) {
+        if (current !== null) {
+          params.delete(key);
+          changed = true;
+        }
+      } else {
+        if (current !== value) {
+          params.set(key, value);
+          changed = true;
+        }
+      }
+    };
+
+    updateParam('search', filters.search || null);
+    updateParam('city', filters.area || null);
+    updateParam('page', filters.page > 0 ? String(filters.page) : null);
+
+    const currentSkills = params.getAll('skill');
+    const newSkills = filters.skills;
+    if (JSON.stringify(currentSkills.sort()) !== JSON.stringify([...newSkills].sort())) {
+      params.delete('skill');
+      newSkills.forEach(skill => params.append('skill', skill));
+      changed = true;
+    }
+
+    if (changed) {
+      setSearchParams(params);
+    }
+  }, [filters, searchParams, setSearchParams]);
 
   return (
     <>
       <Header />
-      <HeroSection onSearchSubmit={syncUrlWithFilters} />
+      <HeroSection />
       <div style={{ position: 'relative', width: '100%', minHeight: '100vh', paddingTop: '24px' }}>
         <div style={{ position: 'absolute', top: '24px', left: '220px', width: '317px' }}>
-          <SkillsAndCityFilter onFilterChange={syncUrlWithFilters} />
+          <SkillsAndCityFilter />
         </div>
         <div style={{ position: 'absolute', top: '24px', left: '561px', width: '659px' }}>
-          <VacanciesList onPageChange={syncUrlWithFilters} />
+          <VacanciesList />
         </div>
       </div>
     </>

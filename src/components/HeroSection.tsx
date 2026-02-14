@@ -1,38 +1,29 @@
+import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppDispatch';
 import { updateFilters, setCurrentPage } from '../store/slices/vacanciesSlice';
-import { loadVacancies } from '../store/slices/vacanciesSlice';
 
-interface HeroSectionProps {
-  onSearchSubmit?: () => void;
-}
-
-const HeroSection: React.FC<HeroSectionProps> = ({ onSearchSubmit }) => {
+const HeroSection: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { filters } = useAppSelector((state) => state.vacancies);
+  const filters = useAppSelector((state) => state.vacancies.filters);
 
-  const handleSearchChange = (value: string) => {
-    dispatch(updateFilters({ search: value }));
-  };
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSearchClick = () => {
-    
+  useEffect(() => {
+    if (inputRef.current && inputRef.current.value !== filters.search) {
+      inputRef.current.value = filters.search;
+    }
+  }, [filters.search]);
+
+  const handleSearchSubmit = () => {
+    const searchValue = inputRef.current?.value || '';
+    dispatch(updateFilters({ search: searchValue }));
     dispatch(setCurrentPage(0));
-  
-    dispatch(
-      loadVacancies({
-        text: filters.search || undefined,
-        area: filters.area || undefined,
-        skill_set: filters.skills,
-        page: 0,
-      })
-    );
-  
-    onSearchSubmit?.();
+    // loadVacancies вызовется автоматически в VacanciesList
   };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
-      handleSearchClick();
+      handleSearchSubmit();
     }
   };
 
@@ -47,7 +38,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onSearchSubmit }) => {
         marginTop: '60px',
       }}
     >
-    
+      {/* заголовки */}
       <div
         style={{
           position: 'absolute',
@@ -89,7 +80,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onSearchSubmit }) => {
         </div>
       </div>
 
-     
+      {/* поисковая строка */}
       <div
         style={{
           position: 'absolute',
@@ -111,10 +102,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onSearchSubmit }) => {
           }}
         >
           <input
+            ref={inputRef}
             type="text"
             placeholder="Должность, ключевые слова"
-            value={filters.search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            defaultValue={filters.search}
             onKeyPress={handleKeyPress}
             style={{
               width: '100%',
@@ -143,11 +134,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onSearchSubmit }) => {
               color: 'rgba(15, 15, 16, 0.5)',
             }}
           >
-            <img src="./search.png" />
+            <img src="./search.png" alt="search" />
           </div>
         </div>
         <button
-          onClick={handleSearchClick}
+          onClick={handleSearchSubmit}
           style={{
             width: '93px',
             height: '42px',

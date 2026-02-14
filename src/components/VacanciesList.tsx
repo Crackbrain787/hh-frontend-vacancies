@@ -4,39 +4,36 @@ import { setCurrentPage, loadVacancies } from '../store/slices/vacanciesSlice';
 import { useEffect } from 'react';
 import VacancyCard from './VacancyCard';
 
-interface VacanciesListProps {
-  onPageChange?: () => void;
-}
-
-const VacanciesList: React.FC<VacanciesListProps> = ({ onPageChange }) => {
+const VacanciesList: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { 
-    vacancies, 
-    loading, 
-    error, 
-    totalPages, 
+  const {
+    vacancies,
+    loading,
+    error,
+    totalPages,
     currentPage,
-    filters 
+    filters
   } = useAppSelector((state) => state.vacancies);
 
-
   useEffect(() => {
-    let searchText = filters.search?.trim();
-    if (!searchText && filters.skills.length > 0) {
-      searchText = filters.skills.join(' ');
+    const searchParts = [];
+    if (filters.search?.trim()) {
+      searchParts.push(filters.search.trim());
     }
+    if (filters.skills.length > 0) {
+      searchParts.push(...filters.skills);
+    }
+    const searchText = searchParts.length > 0 ? searchParts.join(' ') : undefined;
 
     dispatch(loadVacancies({
-      text: searchText || undefined,
+      text: searchText,
       area: filters.area || undefined,
-      skill_set: filters.skills, 
       page: currentPage,
     }));
   }, [dispatch, currentPage, filters.search, filters.area, filters.skills]);
 
   const handlePageChange = (page: number) => {
     dispatch(setCurrentPage(page - 1));
-    onPageChange?.();
   };
 
   const getVisiblePages = () => {
@@ -80,7 +77,7 @@ const VacanciesList: React.FC<VacanciesListProps> = ({ onPageChange }) => {
               <VacancyCard key={vacancy.id} vacancy={vacancy} />
             ))}
           </div>
-          
+
           {totalPages > 1 && (
             <Center mt={32}>
               <Group gap="10px">

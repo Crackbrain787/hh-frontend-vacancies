@@ -1,20 +1,13 @@
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppDispatch';
 import {
-  updateFilters,
   addSkill,
   removeSkill,
   setCurrentPage,
+  updateFilters,
 } from '../store/slices/vacanciesSlice';
-import { loadVacancies } from '../store/slices/vacanciesSlice';
 
-interface SkillsAndCityFilterProps {
-  onFilterChange?: () => void;
-}
-
-const SkillsAndCityFilter: React.FC<SkillsAndCityFilterProps> = ({
-  onFilterChange,
-}) => {
+const SkillsAndCityFilter: React.FC = () => {
   const dispatch = useAppDispatch();
   const { filters } = useAppSelector((state) => state.vacancies);
 
@@ -28,19 +21,10 @@ const SkillsAndCityFilter: React.FC<SkillsAndCityFilterProps> = ({
 
   const handleAddSkill = () => {
     if (newSkill.trim() && !filters.skills.includes(newSkill.trim())) {
-      const updatedSkills = [...filters.skills, newSkill.trim()];
       dispatch(addSkill(newSkill.trim()));
       setNewSkill('');
       dispatch(setCurrentPage(0));
-      dispatch(
-        loadVacancies({
-          text: filters.search || undefined,
-          area: filters.area || undefined,
-          skill_set: updatedSkills,
-          page: 0,
-        })
-      );
-      onFilterChange?.();
+      // loadVacancies вызовется автоматически в VacanciesList
     }
   };
 
@@ -51,33 +35,14 @@ const SkillsAndCityFilter: React.FC<SkillsAndCityFilterProps> = ({
   };
 
   const handleRemoveSkill = (skill: string) => {
-    const updatedSkills = filters.skills.filter((s) => s !== skill);
     dispatch(removeSkill(skill));
     dispatch(setCurrentPage(0));
-    dispatch(
-      loadVacancies({
-        text: filters.search || undefined,
-        area: filters.area || undefined,
-        skill_set: updatedSkills,
-        page: 0,
-      })
-    );
-    onFilterChange?.();
   };
 
   const handleCityChange = (value: string) => {
     const area = value || '';
     dispatch(updateFilters({ area, page: 0 }));
     dispatch(setCurrentPage(0));
-    dispatch(
-      loadVacancies({
-        text: filters.search || undefined,
-        area: area || undefined,
-        skill_set: filters.skills,
-        page: 0,
-      })
-    );
-    onFilterChange?.();
   };
 
   return (
@@ -94,7 +59,7 @@ const SkillsAndCityFilter: React.FC<SkillsAndCityFilterProps> = ({
         gap: '12px',
       }}
     >
-    
+      {/* блок навыков */}
       <div>
         <div
           style={{
@@ -213,7 +178,7 @@ const SkillsAndCityFilter: React.FC<SkillsAndCityFilterProps> = ({
         }}
       />
 
-     
+      {/* выбор города */}
       <div
         style={{
           position: 'relative',
@@ -232,7 +197,7 @@ const SkillsAndCityFilter: React.FC<SkillsAndCityFilterProps> = ({
             zIndex: 1,
           }}
         >
-          <img src="./map-pin.png" />
+          <img src="./map-pin.png" alt="city" />
         </div>
         <select
           value={filters.area}
